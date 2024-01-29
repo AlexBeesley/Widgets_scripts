@@ -22,7 +22,7 @@ def parse_json_from_cdata(cdata_text):
     return json.loads(json_text)
 
 
-def update_widget_keys(value, lookup_dict):
+def get_widget_guids(value, lookup_dict, filename):
     if not all(isinstance(widget, dict) for widget in value):
         print(f"Unexpected type in value. Expected a list of dictionaries.")
         return
@@ -31,8 +31,10 @@ def update_widget_keys(value, lookup_dict):
         key = widget.get('key')
         guid = lookup_dict.get(label.lower())
         if guid:
-            widget['key'] = guid
-            print(f"Updated widget with key: {key} to guid: {guid} for label: {label}")
+            guid = guid.replace('-', '')
+            guid = f"umb://document/{guid}"
+            print(f"Updated widget with key: {key} to guid: {guid} for label: {label} in {filename}")
+            yield guid
 
 
 def format_xml_string(xml_string):
@@ -89,8 +91,8 @@ def main():
             if cdata_text is None:
                 continue
             value = parse_json_from_cdata(cdata_text)
-            update_widget_keys(value, lookup_dict)
-            value_tag.text = f"<![CDATA[{json.dumps(value, indent=2)}]]>"
+            guids = list(get_widget_guids(value, lookup_dict, file))
+            value_tag.text = json.dumps(guids, indent=2)
             xml_string = minidom.parseString(tostring(root)).toprettyxml(indent="  ")
             xml_string = format_xml_string(xml_string)
             write_xml_to_file(xml_string, file_path)
